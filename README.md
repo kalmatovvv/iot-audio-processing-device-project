@@ -58,4 +58,3 @@ The infrastructure is configured via Terraform. To deploy:
    ```
 2. Update your API Gateway endpoint constant in `ConversationViewModel.swift`.
 3. Set your developer signing team under target properties, compile, and run on your device.
-
