@@ -220,6 +220,29 @@ class ConversationViewModel: ObservableObject {
     }
     
     func deleteConversation(at offsets: IndexSet) {
+        for index in offsets {
+            let conversation = conversations[index]
+            deleteConversationFromServer(id: conversation.id.uuidString.lowercased())
+        }
         conversations.remove(atOffsets: offsets)
     }
+    
+    private func deleteConversationFromServer(id: String) {
+        guard let url = URL(string: "\(conversationsEndpoint)?id=\(id)") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        print("Sending DELETE request for conversation: \(id)")
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error deleting conversation from server: \(error)")
+            } else if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                print("Successfully deleted conversation \(id) from server.")
+            } else {
+                print("Failed to delete conversation \(id) from server. Status: \(String(describing: (response as? HTTPURLResponse)?.statusCode))")
+            }
+        }.resume()
+    }
+
 }

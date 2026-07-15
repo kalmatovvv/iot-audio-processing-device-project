@@ -71,7 +71,59 @@ def handler(event, context):
                 'body': json.dumps({'error': f'Failed to retrieve conversations: {str(e)}'})
             }
             
-    # 2. Route GET /presigned-url (existing flow)
+    # 2. Route DELETE /conversations
+    if 'DELETE /conversations' in route_key:
+        if not DYNAMODB_TABLE:
+            print("Configuration Error: DYNAMODB_TABLE is not set.")
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'DynamoDB table configuration is missing'})
+            }
+        
+        query_params = event.get('queryStringParameters') or {}
+        convo_id = query_params.get('id')
+        if not convo_id:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Missing query parameter: id'})
+            }
+            
+        try:
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table(DYNAMODB_TABLE)
+            
+            print(f"Deleting conversation ID '{convo_id}' from table: {DYNAMODB_TABLE}")
+            table.delete_item(Key={'id': convo_id})
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
+                },
+                'body': json.dumps({'message': f'Conversation {convo_id} successfully deleted'})
+            }
+        except Exception as e:
+            print(f"Error deleting conversation {convo_id}: {e}")
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': f'Failed to delete conversation: {str(e)}'})
+            }
+            
+    # 3. Route GET /presigned-url (existing flow)
     if not BUCKET_NAME:
         print("Configuration Error: BUCKET_NAME is not set.")
         return {

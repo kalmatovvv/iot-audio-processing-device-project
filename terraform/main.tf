@@ -190,6 +190,14 @@ resource "aws_apigatewayv2_route" "get_conversations" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
 
+# Route definition for DELETE /conversations
+resource "aws_apigatewayv2_route" "delete_conversations" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "DELETE /conversations"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+
 
 # Grant permission to API Gateway v2 to invoke Lambda
 resource "aws_lambda_permission" "apigateway_invoke" {

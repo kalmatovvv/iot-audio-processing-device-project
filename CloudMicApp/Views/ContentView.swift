@@ -166,7 +166,19 @@ struct ZKeyframeView: View {
                         ConversationCard(conversation: convo)
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            if let index = viewModel.conversations.firstIndex(where: { $0.id == convo.id }) {
+                                withAnimation {
+                                    viewModel.deleteConversation(at: IndexSet(integer: index))
+                                }
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
+
                 // Add padding at bottom to prevent floating action overlaps
                 Color.clear.frame(height: 100)
             }

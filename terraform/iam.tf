@@ -45,12 +45,14 @@ resource "aws_iam_policy" "lambda_policy" {
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:Scan"
+          "dynamodb:Scan",
+          "dynamodb:DeleteItem"
         ]
         Resource = [
           aws_dynamodb_table.conversations_table.arn
         ]
       }
+
     ]
   })
 
