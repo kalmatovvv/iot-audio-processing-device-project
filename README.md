@@ -36,6 +36,7 @@ graph LR
 
 ---
 
+
 ## 🚀 Setup & Deployment Overview
 
 
@@ -53,7 +54,8 @@ The infrastructure is configured via Terraform. To deploy:
 ### iOS Application Setup
 1. Open the Swift project in Xcode:
    ```bash
-   open CloudMicApp.xcodeproj
+   open the CloudMicApp.xcodeproj
    ```
 2. Update your API Gateway endpoint constant in `ConversationViewModel.swift`.
 3. Set your developer signing team under target properties, compile, and run on your device.
+
