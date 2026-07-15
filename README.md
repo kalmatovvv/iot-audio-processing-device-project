@@ -38,6 +38,7 @@ graph LR
 
 ## 🚀 Setup & Deployment Overview
 
+
 ### Infrastructure Deployment
 The infrastructure is configured via Terraform. To deploy:
 1. Initialize Terraform plugins:
