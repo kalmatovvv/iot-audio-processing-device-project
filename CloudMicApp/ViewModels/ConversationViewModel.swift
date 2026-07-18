@@ -93,8 +93,8 @@ class ConversationViewModel: ObservableObject {
     private let conversationsEndpoint = "https://4mbvl3522i.execute-api.us-west-1.amazonaws.com/conversations"
 
     init() {
-        // Load initial mock conversations
-        self.conversations = Conversation.mockConversations
+        // Start with an empty list so mock conversations do not flash on launch
+        self.conversations = []
         // Sync real recordings from the DynamoDB database
         fetchConversations()
     }
@@ -103,6 +103,7 @@ class ConversationViewModel: ObservableObject {
         guard let url = URL(string: conversationsEndpoint) else { return }
         
         isLoading = true
+        let startTime = Date()
         
         URLSession.shared.dataTaskPublisher(for: url)
             .map(\.data)
@@ -114,17 +115,24 @@ class ConversationViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 guard let self = self else { return }
-                self.isLoading = false
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
-                    print("Error fetching conversations from cloud: \(error)")
+                let elapsed = Date().timeIntervalSince(startTime)
+                let remainingDelay = max(0.0, 3.0 - elapsed)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + remainingDelay) {
+                    self.isLoading = false
+                    if case .failure(let error) = completion {
+                        print("Error fetching conversations from cloud: \(error)")
+                    }
                 }
             } receiveValue: { [weak self] fetchedConversations in
                 guard let self = self else { return }
-                withAnimation {
-                    self.conversations = fetchedConversations
+                let elapsed = Date().timeIntervalSince(startTime)
+                let remainingDelay = max(0.0, 3.0 - elapsed)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + remainingDelay) {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        self.conversations = fetchedConversations
+                    }
                 }
             }
             .store(in: &cancellables)

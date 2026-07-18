@@ -24,6 +24,8 @@ struct ZKeyframeView: View {
     @Binding var showingSetup: Bool
     @Binding var selectedConversation: Conversation?
     
+    @State private var rotateDegree: Double = 0.0
+    
     var body: some View {
         ZStack {
             // Dark elegant background
@@ -37,7 +39,9 @@ struct ZKeyframeView: View {
                 deviceStatusBar
                 
                 // Conversations Feed
-                if viewModel.conversations.isEmpty {
+                if viewModel.isLoading && viewModel.conversations.isEmpty {
+                    loadingIndicatorView
+                } else if viewModel.conversations.isEmpty {
                     ScrollView {
                         emptyFeedView
                             .frame(minHeight: 500)
@@ -49,8 +53,8 @@ struct ZKeyframeView: View {
                     feedListView
                 }
             }
-            
-            // Simulation Controls Overlay
+        }
+        .overlay(alignment: .bottom) {
             simulationOverlay
         }
     }
@@ -166,6 +170,7 @@ struct ZKeyframeView: View {
                         ConversationCard(conversation: convo)
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .contextMenu {
                         Button(role: .destructive) {
                             if let index = viewModel.conversations.firstIndex(where: { $0.id == convo.id }) {
@@ -191,103 +196,100 @@ struct ZKeyframeView: View {
 
     
     // MARK: - Simulation Overlay Widget
+    @ViewBuilder
     private var simulationOverlay: some View {
-        VStack {
-            Spacer()
-            
-            if viewModel.simulatedStatus != .ready {
-                VStack(spacing: 16) {
-                    // Title block based on state
-                    HStack {
-                        Image(systemName: stateIcon(for: viewModel.simulatedStatus))
-                            .foregroundColor(.white)
-                            .font(.system(size: 16, weight: .bold))
-                            .modifier(StatusPulseModifier(status: viewModel.simulatedStatus))
-                        
-                        Text(viewModel.simulatedStatus.rawValue.uppercased())
+        if viewModel.simulatedStatus != .ready {
+            VStack(spacing: 16) {
+                // Title block based on state
+                HStack {
+                    Image(systemName: stateIcon(for: viewModel.simulatedStatus))
+                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .bold))
+                        .modifier(StatusPulseModifier(status: viewModel.simulatedStatus))
+                    
+                    Text(viewModel.simulatedStatus.rawValue.uppercased())
+                        .font(.system(.headline, design: .monospaced))
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    if viewModel.simulatedStatus == .recording {
+                        Text(formatDuration(viewModel.recordingDuration))
                             .font(.system(.headline, design: .monospaced))
                             .foregroundColor(.white)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        if viewModel.simulatedStatus == .recording {
-                            Text(formatDuration(viewModel.recordingDuration))
-                                .font(.system(.headline, design: .monospaced))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    
-                    // Waveform for recording
-                    if viewModel.simulatedStatus == .recording {
-                        HStack(spacing: 3) {
-                            ForEach(0..<viewModel.audioLevels.count, id: \.self) { index in
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.white)
-                                    .frame(width: 4, height: max(6, viewModel.audioLevels[index] * 40))
-                                    .animation(.spring(response: 0.15, dampingFraction: 0.5), value: viewModel.audioLevels[index])
-                            }
-                        }
-                        .frame(height: 50)
-                        
-                        Button(action: {
-                            viewModel.stopSimulatedRecording()
-                        }) {
-                            Text("FINISH & SYNC")
-                                .font(.system(.subheadline, design: .monospaced))
-                                .fontWeight(.bold)
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Color.white)
-                                .cornerRadius(8)
-                        }
-                    } else {
-                        // Progress loading indicator steps for Transcribing/Analyzing
-                        VStack(alignment: .leading, spacing: 8) {
-                            ProgressRow(title: "WAV package uploaded to AWS S3", isDone: true)
-                            ProgressRow(title: "Running Whisper V3 transcription", isDone: viewModel.simulatedStatus == .analyzing)
-                            ProgressRow(title: "Analyzing semantics with AI breakdown", isDone: false)
-                        }
-                        
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.2)
-                            .padding(.vertical, 5)
                     }
                 }
-                .padding(20)
-                .background(Color(white: 0.08))
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color(white: 0.2), lineWidth: 1)
-                )
-                .padding()
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .shadow(color: .black.opacity(0.8), radius: 20, y: 10)
-            } else if viewModel.isDeviceConnected {
-                // Floating Sim Trigger button when idle and device is paired
-                Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                        viewModel.startSimulatedRecording()
+                
+                // Waveform for recording
+                if viewModel.simulatedStatus == .recording {
+                    HStack(spacing: 3) {
+                        ForEach(0..<viewModel.audioLevels.count, id: \.self) { index in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.white)
+                                .frame(width: 4, height: max(6, viewModel.audioLevels[index] * 40))
+                                .animation(.spring(response: 0.15, dampingFraction: 0.5), value: viewModel.audioLevels[index])
+                        }
                     }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "mic.fill")
-                        Text("SIMULATE RECORDING")
+                    .frame(height: 50)
+                    
+                    Button(action: {
+                        viewModel.stopSimulatedRecording()
+                    }) {
+                        Text("FINISH & SYNC")
                             .font(.system(.subheadline, design: .monospaced))
                             .fontWeight(.bold)
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.white)
+                            .cornerRadius(8)
                     }
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 16)
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                    .shadow(color: .white.opacity(0.15), radius: 10, y: 5)
+                } else {
+                    // Progress loading indicator steps for Transcribing/Analyzing
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProgressRow(title: "WAV package uploaded to AWS S3", isDone: true)
+                        ProgressRow(title: "Running Whisper V3 transcription", isDone: viewModel.simulatedStatus == .analyzing)
+                        ProgressRow(title: "Analyzing semantics with AI breakdown", isDone: false)
+                    }
+                    
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.2)
+                        .padding(.vertical, 5)
                 }
-                .padding(.bottom, 20)
             }
+            .padding(20)
+            .background(Color(white: 0.08))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(white: 0.2), lineWidth: 1)
+            )
+            .padding()
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .shadow(color: .black.opacity(0.8), radius: 20, y: 10)
+        } else if viewModel.isDeviceConnected {
+            // Floating Sim Trigger button when idle and device is paired
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    viewModel.startSimulatedRecording()
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.fill")
+                    Text("SIMULATE RECORDING")
+                        .font(.system(.subheadline, design: .monospaced))
+                        .fontWeight(.bold)
+                }
+                .foregroundColor(.black)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                .background(Color.white)
+                .clipShape(Capsule())
+                .shadow(color: .white.opacity(0.15), radius: 10, y: 5)
+            }
+            .padding(.bottom, 20)
         }
     }
     
@@ -305,6 +307,48 @@ struct ZKeyframeView: View {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    // MARK: - Loading Indicator View
+    private var loadingIndicatorView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            
+            // Glowing Rotating Spinner
+            ZStack {
+                Circle()
+                    .stroke(Color(white: 0.1), lineWidth: 4)
+                    .frame(width: 50, height: 50)
+                
+                Circle()
+                    .trim(from: 0.0, to: 0.35)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white, Color(red: 0.1, green: 0.45, blue: 0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+                    .frame(width: 50, height: 50)
+                    .rotationEffect(Angle(degrees: rotateDegree))
+                    .onAppear {
+                        withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                            rotateDegree = 360.0
+                        }
+                    }
+            }
+            .shadow(color: Color(red: 0.1, green: 0.45, blue: 0.9).opacity(0.4), radius: 8)
+            
+            Text("LOADING...")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.gray)
+                .tracking(2)
+                .modifier(PulseLoadingModifier())
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -421,5 +465,20 @@ struct ConversationCard: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+    }
+}
+
+// MARK: - Pulse Loading Modifier
+struct PulseLoadingModifier: ViewModifier {
+    @State private var isPulsing = false
+    
+    func body(content: Content) -> some View {
+        content
+            .opacity(isPulsing ? 0.3 : 1.0)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            }
     }
 }

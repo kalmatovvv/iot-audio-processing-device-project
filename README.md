@@ -8,16 +8,8 @@ CloudMic is a serverless backend and companion iOS application designed to captu
 
 The pipeline uses a completely serverless event-driven architecture on AWS to handle scaling and cost efficiency.
 
-```mermaid
-graph LR
-    IoT[IoT Device] -->|Audio Upload| S3[Amazon S3]
-    S3 -->|Audio Event| Lambda[AWS Lambda Processing]
-    Lambda -->|Transcription| Transcribe[AWS Transcribe]
-    Transcribe -->|AI Analysis| Bedrock[Amazon Bedrock LLM]
-    Bedrock -->|Save State| DynamoDB[(Amazon DynamoDB)]
-    iOS[iOS SwiftUI App] -->|Query| APIGW[API Gateway]
-    APIGW -->|Fetch| DynamoDB
-```
+![AWS Cloud Architecture](AWS_Arch_IOT.jpeg)
+
 
 ### Key Stages:
 1. **Secure Ingestion**: IoT devices fetch authorization keys to stream raw audio recordings directly and securely to Amazon S3.

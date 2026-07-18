@@ -14,9 +14,11 @@
 		6ED028CE7B12EF6BA074C593 /* ConversationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701A55379EEF107A54935A4D /* ConversationViewModel.swift */; };
 		8000C6494CD450759B658BCC /* DeviceSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611A40B45C3363778FBB67C6 /* DeviceSetupView.swift */; };
 		8D72BA59D0794909379F30FE /* CloudMicApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97CFE20246E64E028D07A80A /* CloudMicApp.swift */; };
+		F87CFA43AC19CE3F96DD2F3A /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C930EF2B301C6C67479FB8 /* ChatMessage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08C930EF2B301C6C67479FB8 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		102727A1FAF793D9C5A9C81F /* ConversationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationDetailView.swift; sourceTree = "<group>"; };
 		611A40B45C3363778FBB67C6 /* DeviceSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSetupView.swift; sourceTree = "<group>"; };
 		701A55379EEF107A54935A4D /* ConversationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationViewModel.swift; sourceTree = "<group>"; };
@@ -47,6 +49,7 @@
 		3118E04CB0B1842FA17C45B4 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				08C930EF2B301C6C67479FB8 /* ChatMessage.swift */,
 				8C85B3E2D583A0D8F5A81FD8 /* Conversation.swift */,
 			);
 			path = Models;
@@ -147,6 +150,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F87CFA43AC19CE3F96DD2F3A /* ChatMessage.swift in Sources */,
 				8D72BA59D0794909379F30FE /* CloudMicApp.swift in Sources */,
 				5FE49FB566AE98F5A42BFA58 /* ContentView.swift in Sources */,
 				1F83D5BF19E4C6536EB90865 /* Conversation.swift in Sources */,
@@ -174,7 +178,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.shamil.CloudMicApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.antigravity.CloudMicApp;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.7;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -258,7 +262,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.shamil.CloudMicApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.antigravity.CloudMicApp;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.7;
 				TARGETED_DEVICE_FAMILY = 1;

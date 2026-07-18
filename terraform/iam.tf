@@ -46,12 +46,24 @@ resource "aws_iam_policy" "lambda_policy" {
         Effect = "Allow"
         Action = [
           "dynamodb:Scan",
-          "dynamodb:DeleteItem"
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem"
         ]
         Resource = [
           aws_dynamodb_table.conversations_table.arn
         ]
+      },
+      {
+
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel"
+        ]
+        Resource = [
+          "arn:aws:bedrock:*::foundation-model/meta.llama3-*"
+        ]
       }
+
 
     ]
   })

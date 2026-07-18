@@ -23,6 +23,9 @@ s3_client = boto3.client('s3')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE')
 URL_EXPIRATION = int(os.environ.get('URL_EXPIRATION', '300'))
+BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'meta.llama3-1-8b-instruct-v1:0')
+BEDROCK_REGION = os.environ.get('BEDROCK_REGION', 'us-west-2')
+
 
 def handler(event, context):
     print("Received event:", json.dumps(event))
@@ -123,7 +126,140 @@ def handler(event, context):
                 'body': json.dumps({'error': f'Failed to delete conversation: {str(e)}'})
             }
             
-    # 3. Route GET /presigned-url (existing flow)
+    # 3. Route POST /chat
+    if 'POST /chat' in route_key:
+        if not DYNAMODB_TABLE:
+            print("Configuration Error: DYNAMODB_TABLE is not set.")
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'DynamoDB table configuration is missing'})
+            }
+            
+        try:
+            body = json.loads(event.get('body', '{}'))
+        except Exception as e:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Invalid JSON body'})
+            }
+            
+        convo_id = body.get('conversationId')
+        user_message = body.get('message')
+        chat_history = body.get('history', [])
+        
+        if not convo_id or not user_message:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Missing required fields: conversationId and message'})
+            }
+            
+        # Retrieve transcript from DynamoDB
+        try:
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table(DYNAMODB_TABLE)
+            
+            print(f"Retrieving transcript for conversation ID: {convo_id}")
+            response = table.get_item(Key={'id': convo_id})
+            convo_item = response.get('Item')
+            
+            if not convo_item:
+                return {
+                    'statusCode': 404,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({'error': f'Conversation {convo_id} not found'})
+                }
+                
+            transcript_text = convo_item.get('transcript', '').strip()
+            if not transcript_text:
+                transcript_text = "No transcript content available."
+        except Exception as e:
+            print(f"Error fetching from DynamoDB: {e}")
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': f'Failed to retrieve conversation metadata: {str(e)}'})
+            }
+            
+        # Invoke Bedrock Converse API with history and system prompt
+        try:
+            bedrock_runtime = boto3.client('bedrock-runtime', region_name=BEDROCK_REGION)
+            
+            # Format history to match Bedrock Converse API requirements
+            formatted_messages = []
+            for msg in chat_history:
+                role = msg.get('role')
+                content = msg.get('content', '')
+                if role in ['user', 'assistant'] and content:
+                    formatted_messages.append({
+                        'role': role,
+                        'content': [{'text': content}]
+                    })
+                    
+            # Append new user message
+            formatted_messages.append({
+                'role': 'user',
+                'content': [{'text': user_message}]
+            })
+            
+            system_prompt = (
+                "You are a helpful AI assistant. Answer the user's questions about the following audio recording transcript. "
+                "Base your answers strictly on the facts, discussions, and statements directly present in the transcript. "
+                "If the answer cannot be determined or inferred from the transcript, state that clearly.\n\n"
+                f"Transcript:\n{transcript_text}"
+            )
+            
+            print(f"Invoking Bedrock model '{BEDROCK_MODEL_ID}' via Converse API for conversation ID: {convo_id}")
+            converse_response = bedrock_runtime.converse(
+                modelId=BEDROCK_MODEL_ID,
+                messages=formatted_messages,
+                system=[{'text': system_prompt}],
+                inferenceConfig={
+                    'maxTokens': 1000,
+                    'temperature': 0.5
+                }
+            )
+            
+            reply_text = converse_response['output']['message']['content'][0]['text'].strip()
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'reply': reply_text})
+            }
+        except Exception as e:
+            print(f"Error executing chat via Bedrock: {e}")
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': f'Failed to execute assistant query: {str(e)}'})
+            }
+            
+    # 4. Route GET /presigned-url (existing flow)
+
     if not BUCKET_NAME:
         print("Configuration Error: BUCKET_NAME is not set.")
         return {

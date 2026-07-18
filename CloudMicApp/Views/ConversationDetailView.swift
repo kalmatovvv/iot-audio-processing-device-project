@@ -3,53 +3,91 @@ import SwiftUI
 struct ConversationDetailView: View {
     var conversation: Conversation
     
-    @State private var selectedTab: Int = 0 // 0 = Breakdown, 1 = Transcript
+    @State private var selectedTab: Int = 0 // 0 = Breakdown, 1 = Transcript, 2 = Chat
     @State private var isPlaying: Bool = false
     @State private var audioProgress: CGFloat = 0.35 // Mock current progress
     @State private var playbackSpeed: Double = 1.0 // 1.0, 1.5, 2.0
     @State private var completedActionItems: Set<String> = []
+    
+    // AI Chat Agent State
+    @State private var messages: [ChatMessage] = []
+    @State private var chatInput: String = ""
+    @State private var isSending: Bool = false
+    
+    // Environment dismiss to support custom back button pop
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         ZStack {
             // Elegant background
             Color.black.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Title and Metadata Block
-                        headerSection
-                        
-                        // Audio Player section
-                        audioPlayerSection
-                        
-                        // Tab Selector
-                        tabSelector
-                        
-                        // Tab Contents
-                        if selectedTab == 0 {
-                            breakdownTab
-                        } else {
-                            transcriptTab
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                // 1. Pinned Top Section (Non-scrolling)
+                VStack(alignment: .leading, spacing: 16) {
+                    headerSection
+                    audioPlayerSection
+                    tabSelector
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                
+                // 2. Tab Contents (Dynamically scrollable depending on active tab)
+                if selectedTab == 0 {
+                    ScrollView {
+                        breakdownTab
+                            .padding(.horizontal)
+                            .padding(.top, 8)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 16)
+                } else if selectedTab == 1 {
+                    ScrollView {
+                        transcriptTab
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                    }
+                } else {
+                    chatTab
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                 }
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            loadChatHistory()
+        }
     }
     
     // MARK: - Header
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Date & Tags
-            HStack {
+            // Back button and metadata inline row
+            HStack(spacing: 12) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Back")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(white: 0.08))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(white: 0.22), lineWidth: 1)
+                    )
+                }
+                
+                // Date inline next to back button
                 Text(conversation.formattedDate)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(.gray)
                 
                 Spacer()
@@ -58,11 +96,11 @@ struct ConversationDetailView: View {
                 HStack(spacing: 6) {
                     ForEach(conversation.tags, id: \.self) { tag in
                         Text(tag.uppercased())
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(.system(size: 8, design: .monospaced))
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
                             .background(Color(white: 0.12))
                             .cornerRadius(4)
                     }
@@ -70,123 +108,117 @@ struct ConversationDetailView: View {
             }
             
             Text(conversation.title)
-                .font(.system(.title2, design: .default))
+                .font(.system(.title3, design: .default))
                 .fontWeight(.bold)
                 .foregroundColor(.white)
-                .lineLimit(3)
+                .lineLimit(2)
         }
     }
     
     // MARK: - Audio Player
     private var audioPlayerSection: some View {
-        VStack(spacing: 12) {
-            // Progress Bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color(white: 0.16))
-                        .frame(height: 4)
-                    
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(width: geo.size.width * audioProgress, height: 4)
-                    
-                    // Scrub handle
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 12, height: 12)
-                        .offset(x: geo.size.width * audioProgress - 6)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let percentage = value.location.x / geo.size.width
-                                    audioProgress = max(0.0, min(1.0, percentage))
-                                }
-                        )
-                }
+        HStack(spacing: 12) {
+            // Play / Pause
+            Button(action: {
+                isPlaying.toggle()
+            }) {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(width: 36, height: 36)
+                    .background(Color.white)
+                    .clipShape(Circle())
             }
-            .frame(height: 12)
             
-            // Timestamps
-            HStack {
-                let elapsed = conversation.duration * Double(audioProgress)
-                let remaining = conversation.duration - elapsed
-                
-                Text(formatTime(elapsed))
-                    .font(.system(.caption, design: .monospaced))
-                
-                Spacer()
-                
-                Text("-" + formatTime(remaining))
-                    .font(.system(.caption, design: .monospaced))
+            // Rewind 15s
+            Button(action: {
+                audioProgress = max(0.0, audioProgress - (15.0 / conversation.duration))
+            }) {
+                Image(systemName: "gobackward.15")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white)
             }
-            .foregroundColor(.gray)
             
-            // Player Controls
-            HStack(spacing: 40) {
-                // Rewind 15s
-                Button(action: {
-                    audioProgress = max(0.0, audioProgress - (15.0 / conversation.duration))
-                }) {
-                    Image(systemName: "gobackward.15")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                }
-                
-                // Play / Pause
-                Button(action: {
-                    isPlaying.toggle()
-                }) {
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.black)
-                        .frame(width: 60, height: 60)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                }
-                
-                // Fast Forward 15s
-                Button(action: {
-                    audioProgress = min(1.0, audioProgress + (15.0 / conversation.duration))
-                }) {
-                    Image(systemName: "goforward.15")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(.vertical, 8)
-            .overlay(alignment: .trailing) {
-                // Playback speed controller
-                Button(action: {
-                    if playbackSpeed == 1.0 {
-                        playbackSpeed = 1.5
-                    } else if playbackSpeed == 1.5 {
-                        playbackSpeed = 2.0
-                    } else {
-                        playbackSpeed = 1.0
+            // Progress Bar & Timestamps
+            VStack(spacing: 4) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color(white: 0.16))
+                            .frame(height: 4)
+                        
+                        Rectangle()
+                            .fill(Color.white)
+                            .frame(width: geo.size.width * audioProgress, height: 4)
+                        
+                        // Scrub handle
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 10, height: 10)
+                            .offset(x: geo.size.width * audioProgress - 5)
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        let percentage = value.location.x / geo.size.width
+                                        audioProgress = max(0.0, min(1.0, percentage))
+                                    }
+                            )
                     }
-                }) {
-                    Text(String(format: "%.1fx", playbackSpeed))
-                        .font(.system(.caption, design: .monospaced))
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .frame(width: 44, height: 26)
-                        .background(Color(white: 0.12))
-                        .cornerRadius(6)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(white: 0.2), lineWidth: 1)
-                        )
                 }
-                .padding(.trailing, 10)
+                .frame(height: 10)
+                
+                HStack {
+                    let elapsed = conversation.duration * Double(audioProgress)
+                    let remaining = conversation.duration - elapsed
+                    
+                    Text(formatTime(elapsed))
+                        .font(.system(size: 9, design: .monospaced))
+                    Spacer()
+                    Text("-" + formatTime(remaining))
+                        .font(.system(size: 9, design: .monospaced))
+                }
+                .foregroundColor(.gray)
+            }
+            
+            // Fast Forward 15s
+            Button(action: {
+                audioProgress = min(1.0, audioProgress + (15.0 / conversation.duration))
+            }) {
+                Image(systemName: "goforward.15")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white)
+            }
+            
+            // Speed Controller
+            Button(action: {
+                if playbackSpeed == 1.0 {
+                    playbackSpeed = 1.5
+                } else if playbackSpeed == 1.5 {
+                    playbackSpeed = 2.0
+                } else {
+                    playbackSpeed = 1.0
+                }
+            }) {
+                Text(String(format: "%.1fx", playbackSpeed))
+                    .font(.system(size: 9, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 22)
+                    .background(Color(white: 0.12))
+                    .cornerRadius(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color(white: 0.2), lineWidth: 1)
+                    )
             }
         }
-        .padding(20)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(Color(white: 0.06))
-        .cornerRadius(16)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(white: 0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(white: 0.14), lineWidth: 1)
         )
     }
     
@@ -216,6 +248,20 @@ struct ConversationDetailView: View {
                     
                     Rectangle()
                         .fill(selectedTab == 1 ? Color.white : Color.clear)
+                        .frame(height: 2)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            
+            Button(action: { selectedTab = 2 }) {
+                VStack(spacing: 8) {
+                    Text("CHAT")
+                        .font(.system(.subheadline, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(selectedTab == 2 ? .white : .gray)
+                    
+                    Rectangle()
+                        .fill(selectedTab == 2 ? Color.white : Color.clear)
                         .frame(height: 2)
                 }
             }
@@ -367,6 +413,269 @@ struct ConversationDetailView: View {
         let minutes = Int(seconds) / 60
         let remainingSeconds = Int(seconds) % 60
         return String(format: "%02d:%02d", minutes, remainingSeconds)
+    }
+    
+    // MARK: - Chat Tab
+    private var chatTab: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("AI CHAT ASSISTANT")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.gray)
+                    .fontWeight(.bold)
+                    .tracking(1)
+                
+                Spacer()
+                
+                if !messages.isEmpty {
+                    Button(action: {
+                        withAnimation {
+                            messages.removeAll()
+                        }
+                        saveChatHistory()
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 13))
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            
+            if messages.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 24))
+                        .foregroundColor(.gray)
+                    Text("Ask a Question")
+                        .font(.system(.subheadline, design: .monospaced))
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                    Text("I can summarize, clarify details, or answer specific questions about this recording.")
+                        .font(.system(.caption))
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 30)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
+                .background(Color(white: 0.05))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(white: 0.12), lineWidth: 1)
+                )
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(messages) { message in
+                                HStack {
+                                    if message.role == "user" {
+                                        Spacer()
+                                        Text(message.content)
+                                            .font(.system(.body))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(Color(white: 0.15))
+                                            .cornerRadius(14)
+                                            .padding(.leading, 40)
+                                    } else {
+                                        Text(message.content)
+                                            .font(.system(.body))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(Color(red: 0.1, green: 0.45, blue: 0.9)) // Antigravity IDE Blue
+                                            .cornerRadius(14)
+                                            .padding(.trailing, 40)
+                                        Spacer()
+                                    }
+                                }
+                                .id(message.id)
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: message.role == "user" ? .trailing : .leading).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
+                            }
+                        }
+                    }
+                    .frame(maxHeight: .infinity)
+                    .onChange(of: messages) { _ in
+                        if let last = messages.last {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                proxy.scrollTo(last.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Bottom Send Input Bar
+            HStack(spacing: 8) {
+                TextField("Ask assistant...", text: $chatInput)
+                    .font(.system(.body))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color(white: 0.08))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(white: 0.18), lineWidth: 1)
+                    )
+                    .disabled(isSending)
+                
+                Button(action: {
+                    sendChatMessage()
+                }) {
+                    if isSending {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                            .frame(width: 44, height: 40)
+                            .background(Color.white)
+                            .cornerRadius(8)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.black)
+                            .frame(width: 44, height: 40)
+                            .background(chatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.white)
+                            .cornerRadius(8)
+                    }
+                }
+                .disabled(chatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+            }
+            
+            Color.clear.frame(height: 10)
+        }
+        .frame(maxHeight: .infinity)
+    }
+    
+    private func sendChatMessage() {
+        let trimmed = chatInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        let userMessage = ChatMessage(role: "user", content: trimmed)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+            messages.append(userMessage)
+        }
+        saveChatHistory()
+        chatInput = ""
+        isSending = true
+        
+        // Target backend chat API Gateway URL
+        let chatEndpoint = "https://4mbvl3522i.execute-api.us-west-1.amazonaws.com/chat"
+        guard let url = URL(string: chatEndpoint) else {
+            isSending = false
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        struct ChatPayload: Codable {
+            var conversationId: String
+            var message: String
+            var history: [ChatMessage]
+        }
+        
+        let payload = ChatPayload(
+            conversationId: conversation.id.uuidString.lowercased(),
+            message: userMessage.content,
+            history: Array(messages.dropLast())
+        )
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(payload)
+        } catch {
+            print("Failed to encode payload: \(error)")
+            isSending = false
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                self.isSending = false
+                
+                if let error = error {
+                    print("Network error sending chat: \(error)")
+                    let errorMsg = ChatMessage(role: "assistant", content: "Error: Unable to connect to assistant.")
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+                        self.messages.append(errorMsg)
+                    }
+                    self.saveChatHistory()
+                    return
+                }
+                
+                guard let data = data else { return }
+                
+                struct ChatResponse: Codable {
+                    var reply: String
+                }
+                
+                do {
+                    let res = try JSONDecoder().decode(ChatResponse.self, from: data)
+                    let assistantReply = ChatMessage(role: "assistant", content: res.reply)
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+                        self.messages.append(assistantReply)
+                    }
+                    self.saveChatHistory()
+                } catch {
+                    print("Failed to decode reply: \(error). Raw: \(String(data: data, encoding: .utf8) ?? "")")
+                    let errorMsg = ChatMessage(role: "assistant", content: "Error: Failed to process assistant response.")
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+                        self.messages.append(errorMsg)
+                    }
+                    self.saveChatHistory()
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Local Chat Persistence (24 Hour Expiry)
+    private struct PersistedChat: Codable {
+        var timestamp: Date
+        var messages: [ChatMessage]
+    }
+    
+    private func loadChatHistory() {
+        let key = "chat_history_\(conversation.id.uuidString.lowercased())"
+        guard let data = UserDefaults.standard.data(forKey: key) else { return }
+        
+        do {
+            let persisted = try JSONDecoder().decode(PersistedChat.self, from: data)
+            let elapsed = Date().timeIntervalSince(persisted.timestamp)
+            
+            // Limit to 24 hours (24 * 60 * 60 seconds)
+            if elapsed < 24 * 60 * 60 {
+                self.messages = persisted.messages
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+                print("Local chat history for \(conversation.id) expired and was cleared.")
+            }
+        } catch {
+            print("Failed to decode persisted chat: \(error)")
+        }
+    }
+    
+    private func saveChatHistory() {
+        let key = "chat_history_\(conversation.id.uuidString.lowercased())"
+        if messages.isEmpty {
+            UserDefaults.standard.removeObject(forKey: key)
+            return
+        }
+        
+        let persisted = PersistedChat(timestamp: Date(), messages: messages)
+        do {
+            let data = try JSONEncoder().encode(persisted)
+            UserDefaults.standard.set(data, forKey: key)
+        } catch {
+            print("Failed to serialize/save chat history: \(error)")
+        }
     }
 }
 

@@ -129,15 +129,18 @@ resource "aws_lambda_function" "presigned_url_generator" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "app.handler"
   runtime          = "python3.10"
-  timeout          = 15
+  timeout          = 30
 
   environment {
     variables = {
-      BUCKET_NAME    = aws_s3_bucket.audio_bucket.id
-      DYNAMODB_TABLE = aws_dynamodb_table.conversations_table.name
-      URL_EXPIRATION = var.url_expiration_seconds
+      BUCKET_NAME      = aws_s3_bucket.audio_bucket.id
+      DYNAMODB_TABLE   = aws_dynamodb_table.conversations_table.name
+      URL_EXPIRATION   = var.url_expiration_seconds
+      BEDROCK_MODEL_ID = "meta.llama3-1-8b-instruct-v1:0"
+      BEDROCK_REGION   = "us-west-2"
     }
   }
+
 
 
   depends_on = [
@@ -196,6 +199,14 @@ resource "aws_apigatewayv2_route" "delete_conversations" {
   route_key = "DELETE /conversations"
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
+
+# Route definition for POST /chat
+resource "aws_apigatewayv2_route" "post_chat" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /chat"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
 
 
 
