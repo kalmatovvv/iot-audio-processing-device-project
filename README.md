@@ -96,6 +96,12 @@ subgraph UI ["User Interface"]
     PUSHBTN((Push Button))
 end
 
+%% Decoupling Filter
+subgraph Filter ["Noise Filter"]
+    CAP_POS[10uF Capacitor +<br>Long Leg]
+    CAP_NEG[10uF Capacitor -<br>Short Leg]
+end
+
 %% --- Connections ---
 
 %% Power Connections
@@ -105,6 +111,10 @@ GND1 -->|Common Ground| MIC_GND
 GND1 -->|Channel Select| MIC_LR
 GND2 -->|Common Ground| SD_GND
 GND3 -->|Switch Ground| PUSHBTN
+
+%% Decoupling Capacitor Connections
+CAP_POS ===|Positive Filter| MIC_VDD
+CAP_NEG ===|Negative Filter| MIC_GND
 
 %% MicroSD SPI Connections
 CS10 ===|Chip Select| SD_CS
@@ -125,13 +135,15 @@ classDef esp fill:#2d2f38,stroke:#0b57d0,stroke-width:2px,color:#fff;
 classDef storage fill:#1f3760,stroke:#7fcfff,stroke-width:2px,color:#fff;
 classDef audio fill:#0f5223,stroke:#6dd58c,stroke-width:2px,color:#fff;
 classDef ui fill:#3a3f50,stroke:#fcbd00,stroke-width:2px,color:#fff;
+classDef filter fill:#5a2d82,stroke:#dca3ff,stroke-width:2px,color:#fff;
 classDef pin fill:#444746,stroke:#c4c7c5,color:#fff,stroke-width:1px;
 
 class Core esp;
 class Storage storage;
 class Audio audio;
 class UI ui;
-class 3V3,5V,GND1,GND2,GND3,CS10,MOSI11,SCK12,MISO13,WS4,SCK5,SD6,BTN1 pin;
+class Filter filter;
+class 3V3,5V,GND1,GND2,GND3,CS10,MOSI11,SCK12,MISO13,WS4,SCK5,SD6,BTN1,CAP_POS,CAP_NEG pin;
 ```
 
 ---
