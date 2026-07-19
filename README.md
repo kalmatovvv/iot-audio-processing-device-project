@@ -171,3 +171,12 @@ The infrastructure is configured via Terraform. To deploy:
    ```
 2. Update your API Gateway endpoint constant in `ConversationViewModel.swift`.
 3. Set your developer signing team under target properties, compile, and run on your device.
+
+## IOS App UI
+
+<img width="589" height="1280" alt="ConvoLytics_IOS_Main_page" src="https://github.com/user-attachments/assets/9cc719c9-bb08-4d3d-8e7d-be73d2b81af3" />
+<img width="589" height="1280" alt="ConvoLytics_IOS_Convopage" src="https://github.com/user-attachments/assets/f8134d23-c1fc-434e-8f96-050ba35ca5c8" />
+<img width="589" height="1280" alt="ConvoLytics_IOS_Transcriptpage" src="https://github.com/user-attachments/assets/a153d576-0273-44a9-bc9b-07382cbdd037" />
+<img width="589" height="1280" alt="ConvoLytics_IOS_AIchat2" src="https://github.com/user-attachments/assets/9614705d-29fe-4179-b69a-5aff0c40b23c" />
+<img width="589" height="1280" alt="ConvoLytics_IOS_AIchat" src="https://github.com/user-attachments/assets/b8108911-0281-4e45-af5b-8a21d3b4a755" />
+
