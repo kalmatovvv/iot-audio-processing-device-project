@@ -269,28 +269,8 @@ struct ZKeyframeView: View {
             .padding()
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .shadow(color: .black.opacity(0.8), radius: 20, y: 10)
-        } else if viewModel.isDeviceConnected {
-            // Floating Sim Trigger button when idle and device is paired
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                    viewModel.startSimulatedRecording()
-                }
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "mic.fill")
-                    Text("SIMULATE RECORDING")
-                        .font(.system(.subheadline, design: .monospaced))
-                        .fontWeight(.bold)
-                }
-                .foregroundColor(.black)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(Color.white)
-                .clipShape(Capsule())
-                .shadow(color: .white.opacity(0.15), radius: 10, y: 5)
-            }
-            .padding(.bottom, 20)
         }
+    }
     }
     
     // MARK: - Helper Methods
