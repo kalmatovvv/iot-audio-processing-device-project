@@ -1,6 +1,6 @@
-# CloudMic: Serverless IoT Audio Ingestion & AI Semantic Analysis Pipeline
+# ConvoLytics: Serverless IoT Audio Ingestion & AI Semantic Analysis Pipeline
 
-CloudMic is a serverless backend and companion iOS application designed to capture, process, and analyze speech from IoT microcontrollers. The system converts raw audio, transcribes it, runs semantic analysis via AI models in Amazon Bedrock, and updates a mobile dashboard.
+ConvoLytics is a serverless backend and companion iOS application designed to capture, process, and analyze speech from IoT microcontrollers. The system converts raw audio, transcribes it, runs semantic analysis via AI models in Amazon Bedrock, and updates a mobile dashboard.
 
 ---
 

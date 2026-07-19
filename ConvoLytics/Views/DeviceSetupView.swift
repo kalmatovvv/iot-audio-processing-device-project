@@ -64,7 +64,7 @@ struct DeviceSetupView: View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("CLOUDMIC PROTOTYPE")
+                    Text("CONVOLYTICS PROTOTYPE")
                         .font(.system(.headline))
                         .fontWeight(.bold)
                     Text(viewModel.isDeviceConnected ? "Connected via Bluetooth LE" : "Disconnected")
@@ -109,7 +109,7 @@ struct DeviceSetupView: View {
                 HStack {
                     Image(systemName: "dot.radiowaves.left.and.right")
                         .foregroundColor(.gray)
-                    Text("Searching for CloudMic nearby...")
+                    Text("Searching for ConvoLytics nearby...")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.gray)
                 }

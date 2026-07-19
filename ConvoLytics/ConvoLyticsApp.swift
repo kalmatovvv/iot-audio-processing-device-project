@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CloudMicApp: App {
+struct ConvoLyticsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

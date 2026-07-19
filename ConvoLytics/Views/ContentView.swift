@@ -63,7 +63,7 @@ struct ZKeyframeView: View {
     private var headerView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("CLOUDMIC")
+                Text("CONVOLYTICS")
                     .font(.system(.subheadline, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.gray)
@@ -152,7 +152,7 @@ struct ZKeyframeView: View {
             Text("No conversations synchronized yet")
                 .font(.system(.headline))
                 .foregroundColor(.white)
-            Text("Power on your CloudMic and press the button to record. The transcription will appear here automatically.")
+            Text("Power on your ConvoLytics device and press the button to record. The transcription will appear here automatically.")
                 .font(.system(.subheadline))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
