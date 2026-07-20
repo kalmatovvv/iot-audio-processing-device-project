@@ -90,7 +90,7 @@ class ConversationViewModel: ObservableObject {
     @Published var isLoading: Bool = false
 
     // Target endpoint URL of your deployed AWS API Gateway
-    private let conversationsEndpoint = "https://4mbvl3522i.execute-api.us-west-1.amazonaws.com/conversations"
+    private let conversationsEndpoint = "https://YOUR_API_GATEWAY_URL_HERE/conversations"
 
     init() {
         // Start with an empty list so mock conversations do not flash on launch
